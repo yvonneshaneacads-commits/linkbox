@@ -56,8 +56,7 @@ main{padding:10px 14px 90px;max-width:720px;margin:0 auto}
 .top{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);margin-bottom:6px}
 .badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:11px;background:var(--lp);color:var(--pink)}
 .badge.video,.badge.article{background:var(--gr);color:var(--grd)}
-.top .col{margin-left:auto;border:0;background:var(--gr);color:var(--grd);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700}
-.top .col.none{background:transparent;border:1.5px dashed var(--pink);color:var(--pink)}
+.top .col{margin-left:auto;color:var(--grd)}
 .due{border-radius:8px;padding:2px 8px;font-weight:700;font-size:11px;background:var(--gr);color:var(--grd)}
 .due.late{background:var(--lp);color:#e0436b}
 .title{display:block;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none;word-break:break-word}
@@ -118,12 +117,6 @@ main{padding:10px 14px 90px;max-width:720px;margin:0 auto}
   <label>Review on (optional)</label><input id="f-due" type="date">
   <div class="btns" style="margin-top:8px"><button class="btn alt" data-d="0">Today</button><button class="btn alt" data-d="1">Tomorrow</button><button class="btn alt" data-d="7">+1 week</button><button class="btn alt" data-d="">Clear</button></div>
   <div class="btns"><button class="btn del" id="f-del">Delete</button><button class="btn alt" id="f-cancel">Cancel</button><button class="btn" id="f-save">Save</button></div>
-</div>
-<div class="sheet" id="catsheet">
-  <h2 id="cat-title">Choose a category</h2>
-  <div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px"></div>
-  <label>New category</label><input id="cat-new" placeholder="Type a name, like Recipes" maxlength="30">
-  <div class="btns"><button class="btn alt" id="cat-none">No category</button><button class="btn" id="cat-add">Add</button></div>
 </div>
 <div class="sheet" id="menu">
   <h2>Settings (｡•̀ᴗ-)✧</h2>
@@ -311,7 +304,6 @@ function render(){
   var t=$('#types');t.replaceChildren();TYPES.forEach(function(x){t.append(chip(x[1],ui.type===x[0],function(){ui.type=x[0];render()}))});
   var c=$('#cols');c.replaceChildren(chip('All',ui.col==='all',function(){ui.col='all';render()},'c'));
   allCols().forEach(function(n){c.append(chip(n,ui.col===n,function(){ui.col=n;render()},'c'))});
-  c.append(chip('+ New',false,function(){openCat(null)},'c'));
   var ca=$('#colact');ca.replaceChildren();
   if(ui.col!=='all'){ca.append(h('button',{onclick:renameCol},'Rename'),h('button',{onclick:delCol},'Delete'))}
   var tags={};S.links.forEach(function(l){l.tags.forEach(function(g){tags[g]=1})});
@@ -322,7 +314,7 @@ function render(){
   L.forEach(function(l){
     var i=info(l.url);
     m.append(h('div',{class:'card'+(l.done?' done':'')},
-      h('div',{class:'top'},h('span',{class:'badge '+l.type},TL[l.type]),h('span',null,i.pl),dueLbl(l),h('button',{class:'col'+(l.col?'':' none'),onclick:function(){openCat(l)}},l.col||'+ Category')),
+      h('div',{class:'top'},h('span',{class:'badge '+l.type},TL[l.type]),h('span',null,i.pl),dueLbl(l),l.col?h('span',{class:'col'},l.col):null),
       h('a',{class:'title',href:l.url,target:'_blank',rel:'noopener noreferrer'},l.title),
       l.note?h('p',{class:'note'},l.note):null,
       l.tags.length?h('div',{class:'tags'},l.tags.map(function(g){return h('button',{class:'tag',onclick:function(){ui.tag=g;render()}},'#'+g)})):null,
@@ -333,7 +325,7 @@ function render(){
         h('button',{onclick:function(){openSheet(l)}},'Edit'))))});
 }
 function show(id,on){$('#back').style.display=on?'block':'none';$(id).style.display=on?'block':'none'}
-function closeAll(){$('#back').style.display='none';$('#sheet').style.display='none';$('#menu').style.display='none';$('#catsheet').style.display='none'}
+function closeAll(){$('#back').style.display='none';$('#sheet').style.display='none';$('#menu').style.display='none'}
 function openSheet(l,url){
   editId=l?l.id:null;typeTouched=!!l;
   $('#sh-title').textContent=l?'Edit link (・ω・)ゞ':'Save link (˶ᵔ ᵕ ᵔ˶)';
@@ -355,19 +347,6 @@ function saveSheet(){
   if(col&&S.cols.indexOf(col)<0)S.cols.push(col);
   save();closeAll();render();toast('Saved (˶ᵔ ᵕ ᵔ˶)');
 }
-var catTarget=null;
-function openCat(l){
-  catTarget=l;$('#cat-title').textContent=l?'Choose a category':'New category';
-  var box=$('#cat-list');box.replaceChildren();$('#cat-none').style.display=l?'block':'none';
-  if(l){allCols().forEach(function(n){box.append(h('button',{class:'chip c'+(l.col===n?' on':''),onclick:function(){setCat(l,n)}},n))})}
-  $('#cat-new').value='';show('#catsheet',true)}
-function setCat(l,n){l.col=n;save();closeAll();render();toast(n?'Category: '+n+' (˶ᵔ ᵕ ᵔ˶)':'Category removed')}
-$('#cat-none').onclick=function(){if(catTarget)setCat(catTarget,'')};
-$('#cat-add').onclick=function(){
-  var n=$('#cat-new').value.trim();if(!n){toast('Type a category name (・_・;)');return}
-  if(S.cols.indexOf(n)<0)S.cols.push(n);
-  if(catTarget)setCat(catTarget,n);else{save();closeAll();render();toast('Category added (˶ᵔ ᵕ ᵔ˶)')}};
-$('#cat-new').addEventListener('keydown',function(e){if(e.key==='Enter')$('#cat-add').click()});
 function renameCol(){var n=prompt('Rename collection',ui.col);if(!n||!n.trim())return;n=n.trim();var o=ui.col;
   S.cols=S.cols.map(function(c){return c===o?n:c});if(S.cols.indexOf(n)<0)S.cols.push(n);
   S.links.forEach(function(l){if(l.col===o)l.col=n});ui.col=n;save();render()}
