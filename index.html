@@ -30,6 +30,12 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 h1{margin:0;font-size:22px;color:var(--pink);flex:1;letter-spacing:.3px}
 h1 small{display:block;font-size:12px;font-weight:400;color:var(--mut);letter-spacing:0}
 .ib{border:0;background:var(--lp);color:var(--pink);width:38px;height:38px;border-radius:12px;font-size:18px;font-weight:700}
+.ib.on{background:var(--pink);color:#fff}
+.mdock{position:fixed;left:0;right:0;bottom:0;z-index:15;max-width:480px;margin:0 auto;background:var(--card);border:2px solid var(--pink);border-bottom:0;border-radius:16px 16px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));display:none}
+.mdock iframe{display:block;width:100%;height:200px;border:0;border-radius:10px;background:#000}
+.mrow{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px}
+.mrow a{color:var(--pink);font-weight:700}
+.mrow button{border:0;background:var(--lp);color:var(--pink);border-radius:10px;padding:6px 12px;font-weight:700}
 .add{display:flex;gap:8px;margin-top:10px}
 .add input,.srch{flex:1;min-width:0;border:1.5px dashed var(--pink);background:var(--card);border-radius:12px;padding:10px 12px;outline:0}
 .btn{border:0;background:var(--pink);color:#fff;font-weight:700;border-radius:12px;padding:10px 14px}
@@ -50,7 +56,8 @@ main{padding:10px 14px 90px;max-width:720px;margin:0 auto}
 .top{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);margin-bottom:6px}
 .badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:11px;background:var(--lp);color:var(--pink)}
 .badge.video,.badge.article{background:var(--gr);color:var(--grd)}
-.top .col{margin-left:auto;color:var(--grd)}
+.top .col{margin-left:auto;border:0;background:var(--gr);color:var(--grd);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700}
+.top .col.none{background:transparent;border:1.5px dashed var(--pink);color:var(--pink)}
 .due{border-radius:8px;padding:2px 8px;font-weight:700;font-size:11px;background:var(--gr);color:var(--grd)}
 .due.late{background:var(--lp);color:#e0436b}
 .title{display:block;font-weight:700;font-size:16px;color:var(--ink);text-decoration:none;word-break:break-word}
@@ -79,6 +86,7 @@ main{padding:10px 14px 90px;max-width:720px;margin:0 auto}
   <div class="row">
     <img class="av" id="av" alt="">
     <h1>Linkbox<small id="count"></small><small id="sync"></small></h1>
+    <button class="ib" id="musb" title="Background music">&#9834;</button>
     <button class="ib" id="sortb" title="Sort">&#8645;</button>
     <button class="ib" id="menub" title="Settings">&#8943;</button>
   </div>
@@ -111,10 +119,18 @@ main{padding:10px 14px 90px;max-width:720px;margin:0 auto}
   <div class="btns" style="margin-top:8px"><button class="btn alt" data-d="0">Today</button><button class="btn alt" data-d="1">Tomorrow</button><button class="btn alt" data-d="7">+1 week</button><button class="btn alt" data-d="">Clear</button></div>
   <div class="btns"><button class="btn del" id="f-del">Delete</button><button class="btn alt" id="f-cancel">Cancel</button><button class="btn" id="f-save">Save</button></div>
 </div>
+<div class="sheet" id="catsheet">
+  <h2 id="cat-title">Choose a category</h2>
+  <div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px"></div>
+  <label>New category</label><input id="cat-new" placeholder="Type a name, like Recipes" maxlength="30">
+  <div class="btns"><button class="btn alt" id="cat-none">No category</button><button class="btn" id="cat-add">Add</button></div>
+</div>
 <div class="sheet" id="menu">
   <h2>Settings (｡•̀ᴗ-)✧</h2>
   <label>Theme</label>
   <div class="btns" style="margin-top:0"><button class="btn alt" data-th="auto">Auto</button><button class="btn alt" data-th="light">Light</button><button class="btn alt" data-th="dark">Dark</button></div>
+  <label>Background music</label>
+  <div class="btns" style="margin-top:0"><button class="btn alt" id="mus2">Music: off. Tap to play</button></div>
   <label>Account</label>
   <p class="help" id="acct"></p>
   <div class="btns" style="margin-top:0"><button class="btn alt" id="signin" style="display:none">Sign in</button><button class="btn alt" id="signout" style="display:none">Sign out</button></div>
@@ -236,6 +252,30 @@ function wireAuth(){
   $('#a-in').onclick=function(){doAuth('in')};$('#a-up').onclick=function(){doAuth('up')};
   $('#a-skip').onclick=hideAuth;$('#signout').onclick=signOut;$('#signin').onclick=function(){closeAll();showAuth()};
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&SES&&firstDone)pull()})}
+var MU={on:false,want:false},MUKEY='linkbox.music',YTID='pAeHWyhqdi8';
+try{MU.want=!!(JSON.parse(localStorage.getItem(MUKEY)||'{}').on)}catch(e){}
+function musicSave(){try{localStorage.setItem(MUKEY,JSON.stringify({on:MU.want}))}catch(e){}}
+function musicBtn(){var b=$('#musb');if(b)b.classList.toggle('on',MU.on);var b2=$('#mus2');if(b2)b2.textContent=MU.on?'Close the music player':'Open the music player'}
+function musicDock(){
+  var d=document.getElementById('mdock');if(d)return d;
+  d=document.createElement('div');d.id='mdock';d.className='mdock';
+  var f=document.createElement('iframe');f.id='mfr';f.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');f.setAttribute('title','Background music');f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+  var r=document.createElement('div');r.className='mrow';
+  var a=document.createElement('a');a.href='https://youtu.be/'+YTID;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open on YouTube';
+  var x=document.createElement('button');x.textContent='Close music';x.onclick=musicToggle;
+  r.appendChild(a);r.appendChild(x);d.appendChild(f);d.appendChild(r);document.body.appendChild(d);return d}
+function musicStart(){
+  var d=musicDock(),f=document.getElementById('mfr');
+  f.src='https://www.youtube.com/embed/'+YTID+'?autoplay=1&playsinline=1&loop=1&playlist='+YTID+'&rel=0';
+  d.style.display='block';document.body.style.paddingBottom='270px';MU.on=true;musicBtn()}
+function musicStop(){
+  var d=document.getElementById('mdock');if(d){var f=document.getElementById('mfr');if(f)f.src='about:blank';d.style.display='none'}
+  document.body.style.paddingBottom='';MU.on=false;musicBtn()}
+function musicToggle(){
+  if(MU.on){MU.want=false;musicStop()}else{MU.want=true;musicStart();if(typeof toast==='function')toast('Tap play in the player to start the music')}
+  musicSave();musicBtn()}
+function musicInit(){var b=$('#musb');if(b)b.onclick=musicToggle;var b2=$('#mus2');if(b2)b2.onclick=musicToggle;musicBtn()}
+
 function initSync(){
   if(!cfgOK()){setSync('off');updAcct();return}
   try{SES=JSON.parse(localStorage.getItem(SK))}catch(e){SES=null}
@@ -271,6 +311,7 @@ function render(){
   var t=$('#types');t.replaceChildren();TYPES.forEach(function(x){t.append(chip(x[1],ui.type===x[0],function(){ui.type=x[0];render()}))});
   var c=$('#cols');c.replaceChildren(chip('All',ui.col==='all',function(){ui.col='all';render()},'c'));
   allCols().forEach(function(n){c.append(chip(n,ui.col===n,function(){ui.col=n;render()},'c'))});
+  c.append(chip('+ New',false,function(){openCat(null)},'c'));
   var ca=$('#colact');ca.replaceChildren();
   if(ui.col!=='all'){ca.append(h('button',{onclick:renameCol},'Rename'),h('button',{onclick:delCol},'Delete'))}
   var tags={};S.links.forEach(function(l){l.tags.forEach(function(g){tags[g]=1})});
@@ -281,7 +322,7 @@ function render(){
   L.forEach(function(l){
     var i=info(l.url);
     m.append(h('div',{class:'card'+(l.done?' done':'')},
-      h('div',{class:'top'},h('span',{class:'badge '+l.type},TL[l.type]),h('span',null,i.pl),dueLbl(l),l.col?h('span',{class:'col'},l.col):null),
+      h('div',{class:'top'},h('span',{class:'badge '+l.type},TL[l.type]),h('span',null,i.pl),dueLbl(l),h('button',{class:'col'+(l.col?'':' none'),onclick:function(){openCat(l)}},l.col||'+ Category')),
       h('a',{class:'title',href:l.url,target:'_blank',rel:'noopener noreferrer'},l.title),
       l.note?h('p',{class:'note'},l.note):null,
       l.tags.length?h('div',{class:'tags'},l.tags.map(function(g){return h('button',{class:'tag',onclick:function(){ui.tag=g;render()}},'#'+g)})):null,
@@ -292,7 +333,7 @@ function render(){
         h('button',{onclick:function(){openSheet(l)}},'Edit'))))});
 }
 function show(id,on){$('#back').style.display=on?'block':'none';$(id).style.display=on?'block':'none'}
-function closeAll(){$('#back').style.display='none';$('#sheet').style.display='none';$('#menu').style.display='none'}
+function closeAll(){$('#back').style.display='none';$('#sheet').style.display='none';$('#menu').style.display='none';$('#catsheet').style.display='none'}
 function openSheet(l,url){
   editId=l?l.id:null;typeTouched=!!l;
   $('#sh-title').textContent=l?'Edit link (・ω・)ゞ':'Save link (˶ᵔ ᵕ ᵔ˶)';
@@ -314,6 +355,19 @@ function saveSheet(){
   if(col&&S.cols.indexOf(col)<0)S.cols.push(col);
   save();closeAll();render();toast('Saved (˶ᵔ ᵕ ᵔ˶)');
 }
+var catTarget=null;
+function openCat(l){
+  catTarget=l;$('#cat-title').textContent=l?'Choose a category':'New category';
+  var box=$('#cat-list');box.replaceChildren();$('#cat-none').style.display=l?'block':'none';
+  if(l){allCols().forEach(function(n){box.append(h('button',{class:'chip c'+(l.col===n?' on':''),onclick:function(){setCat(l,n)}},n))})}
+  $('#cat-new').value='';show('#catsheet',true)}
+function setCat(l,n){l.col=n;save();closeAll();render();toast(n?'Category: '+n+' (˶ᵔ ᵕ ᵔ˶)':'Category removed')}
+$('#cat-none').onclick=function(){if(catTarget)setCat(catTarget,'')};
+$('#cat-add').onclick=function(){
+  var n=$('#cat-new').value.trim();if(!n){toast('Type a category name (・_・;)');return}
+  if(S.cols.indexOf(n)<0)S.cols.push(n);
+  if(catTarget)setCat(catTarget,n);else{save();closeAll();render();toast('Category added (˶ᵔ ᵕ ᵔ˶)')}};
+$('#cat-new').addEventListener('keydown',function(e){if(e.key==='Enter')$('#cat-add').click()});
 function renameCol(){var n=prompt('Rename collection',ui.col);if(!n||!n.trim())return;n=n.trim();var o=ui.col;
   S.cols=S.cols.map(function(c){return c===o?n:c});if(S.cols.indexOf(n)<0)S.cols.push(n);
   S.links.forEach(function(l){if(l.col===o)l.col=n});ui.col=n;save();render()}
@@ -341,7 +395,7 @@ $('#bk-restore').onclick=function(){try{var d=JSON.parse($('#bk').value);if(!d||
 $('#wipe').onclick=function(){if(confirm('Delete all saved links on this device?')){S={links:[],cols:['Watch later','Inspo','Learning']};save();closeAll();render()}};
 document.querySelectorAll('[data-d]').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-d');if(v===''){$('#f-due').value='';return}var d=new Date();d.setDate(d.getDate()+parseInt(v,10));$('#f-due').value=ymd(d)}});
 (function(){try{var t=localStorage.getItem(TH);if(t&&t!=='auto')theme(t)}catch(e){}})();
-$('#av').src=IMG;$('#aimg').src=IMG;wireAuth();$('#banner').src=BANNER;load();render();initSync();
+$('#av').src=IMG;$('#aimg').src=IMG;wireAuth();musicInit();$('#banner').src=BANNER;load();render();initSync();
 </script>
 </body>
 </html>
